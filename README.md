@@ -166,3 +166,15 @@ MIT License. See [LICENSE](./LICENSE).
 
 ---
 
+## Testing & Utilities
+
+- **index.html**  
+  This file is provided as a simple frontend for testing the authentication API during development.  
+  **Note:** It is not part of the published `tsecure_auth` package and is intended for local testing only.
+
+- **decrypt_tool.py**  
+  This script is a utility for developers to decrypt tokens or hashed passwords for debugging and testing purposes.  
+  **Note:** It is not included in the distributed package and should only be used in a secure, local development environment.
+
+---
+
