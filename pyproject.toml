@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "tsecure-auth"
+version = "0.0.1"
+description = "A secure, modern, and developer-friendly authentication system for Python applications."
+authors = ["Temesgen Debebe <temesgendebebe1921@gmail.com>"]
+readme = "README.md"
+packages = [
+    { include = "tsecure_auth" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.110.0"
+pydantic = "^2.6.4"
+cryptography = "^42.0.5"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+sqlalchemy = "^2.0.28"
+python-multipart = "^0.0.9"
+psycopg2-binary = "^2.9.9"
+asyncpg = "^0.29.0"
+python-dotenv = "^1.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-SecureAuth Test Page</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 2rem; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1, h2 { color: #1a1a1a; text-align: center; }
+        form { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem; }
+        input { padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+        button { padding: 0.75rem 1.5rem; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
+        pre { background: #e9ecef; padding: 1rem; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: "Courier New", Courier, monospace; }
+        .section { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; }
+        #apiButtons button { background-color: #28a745; }
+        #apiButtons button:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>T-SecureAuth Test Page</h1>
+
+        <!-- Registration Form -->
+        <section>
+            <h2>1. Register User</h2>
+            <form id="registerForm">
+                <input type="text" id="regUsername" placeholder="Username" required>
+                <input type="email" id="regEmail" placeholder="Email" required>
+                <input type="password" id="regPassword" placeholder="Password" required>
+                <input type="text" id="regPhone" placeholder="Phone" required>
+                <input type="text" id="regRole" placeholder="Role" value="member" required>
+                <button type="submit">Register</button>
+            </form>
+            <h3>Registration Response:</h3>
+            <pre id="registerResponse">...</pre>
+        </section>
+
+        <!-- Login Form -->
+        <section class="section">
+            <h2>2. Login</h2>
+            <form id="loginForm">
+                <input type="text" id="loginIdentifier" placeholder="Username or Email" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <h3>Login Response:</h3>
+            <pre id="loginResponse">...</pre>
+        </section>
+
+        <!-- Protected API Calls -->
+        <section class="section">
+            <h2>3. Test Protected Endpoints</h2>
+            <p>After logging in, your access token is stored automatically. Use these buttons to test authenticated routes.</p>
+            <div id="apiButtons" style="display: flex; flex-direction: column; gap: 1rem;">
+                <button id="getProfileBtn">Get My Profile (/users/me)</button>
+                <button id="getEventsBtn">Get Security Events (/admin/security-events)</button>
+                <button id="logoutBtn" style="background-color:#dc3545;">Logout</button>
+            </div>
+            <h3>API Response:</h3>
+            <pre id="apiResponse">...</pre>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://127.0.0.1:8000";
+        let accessToken = null;
+
+        // --- Handle Registration ---
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const responseElement = document.getElementById('registerResponse');
+            const data = {
+                username: this.regUsername.value,
+                email: this.regEmail.value,
+                password: this.regPassword.value,
+                phone: this.regPhone.value,
+                role: this.regRole.value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                responseElement.textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // --- Handle Login ---
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const responseElement = document.getElementById('loginResponse');
+            const formData = new URLSearchParams();
+            formData.append('username', this.loginIdentifier.value);
+            formData.append('password', this.loginPassword.value);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.access_token) {
+                    accessToken = result.access_token;
+                }
+                responseElement.textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // --- Helper for API calls ---
+        async function fetchProtectedApi(endpoint) {
+            const responseElement = document.getElementById('apiResponse');
+            if (!accessToken) {
+                responseElement.textContent = "You must log in first to get an access token.";
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const result = await response.json();
+                responseElement.textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // --- Attach listeners to API buttons ---
+        document.getElementById('getProfileBtn').addEventListener('click', () => fetchProtectedApi('/auth/me'));
+        document.getElementById('getEventsBtn').addEventListener('click', () => fetchProtectedApi('/admin/security-events'));
+
+        // --- Logout Button ---
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            const responseElement = document.getElementById('apiResponse');
+            if (!accessToken) {
+                responseElement.textContent = "You are not logged in.";
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (response.status === 204) {
+                    accessToken = null;
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    responseElement.textContent = "Logged out successfully.";
+                } else {
+                    const result = await response.json();
+                    responseElement.textContent = `Logout failed: ${JSON.stringify(result)}`;
+                }
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+            }
+        });
+
+    </script>
+</body>
+</html>
